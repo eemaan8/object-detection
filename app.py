@@ -5,7 +5,7 @@ from collections import Counter
 
 app = Flask(__name__)
 
-# Load YOLOv8 model (use 'yolov8n.pt' for faster/lighter model if needed)
+# Load YOLOv8 model (use 'yolov8n.pt' for lighter model if needed)
 model = YOLO("yolov8s.pt")
 
 @app.route('/')
@@ -41,7 +41,7 @@ def detect():
     class_counts = Counter(detected_classes)
 
     if not class_counts:
-        return "🔍 No objects detected"
+        return "No objects detected"
 
     # Format output: "2 persons, 1 chair"
     readable_output = ", ".join(
@@ -51,10 +51,5 @@ def detect():
     return f"Detected: {readable_output}"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
-
-
-    return f"Detected {readable_output}"
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))  # For Render compatibility
+    app.run(host="0.0.0.0", port=port)
