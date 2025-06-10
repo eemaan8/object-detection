@@ -1,51 +1,59 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request
 from ultralytics import YOLO
 import os
-from PIL import Image
-import uuid
+from collections import Counter
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# Load the optimized YOLOv8n model
-model = YOLO("yolov8n.pt")  # nano model is faster
+# Ensure model file exists
+MODEL_PATH = "yolov8s.pt"
+if not os.path.exists(MODEL_PATH):
+    import requests
+    url = "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8s.pt"
+    r = requests.get(url)
+    with open(MODEL_PATH, "wb") as f:
+        f.write(r.content)
 
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Load YOLOv8 model
+model = YOLO(MODEL_PATH)
 
-@app.route("/", methods=["GET"])
-def index():
+@app.route('/')
+def home():
     return "ClearSight Object Detection API is running!"
 
-@app.route("/detect", methods=["POST"])
-def detect_objects():
-    if "image" not in request.files:
-        return jsonify({"error": "No image file provided"}), 400
+@app.route('/detect', methods=['POST'])
+def detect():
+    if 'image' not in request.files:
+        return "No image file provided", 400
 
-    image_file = request.files["image"]
-    filename = f"{uuid.uuid4().hex}.jpg"
-    image_path = os.path.join(UPLOAD_FOLDER, filename)
-    image_file.save(image_path)
+    image_file = request.files['image']
+    if image_file.filename == '':
+        return "Empty filename", 400
 
-    # Perform object detection
-    results = model(image_path, imgsz=320, conf=0.25)
+    temp_path = "temp.jpg"
+    image_file.save(temp_path)
 
-    # Extract detection results
-    result = results[0]
-    detections = []
-    for box in result.boxes:
-        cls_id = int(box.cls[0])
-        class_name = model.names[cls_id]
-        confidence = float(box.conf[0])
-        detections.append({
-            "class": class_name,
-            "confidence": round(confidence, 3)
-        })
+    results = model(temp_path)
+    os.remove(temp_path)
 
-    # Optionally, return detections and image
-    return jsonify({
-        "detections": detections
-    })
+    detected_classes = []
+    for r in results:
+        for box in r.boxes:
+            class_id = int(box.cls[0])
+            class_name = model.names[class_id]
+            detected_classes.append(class_name)
+
+    class_counts = Counter(detected_classes)
+
+    if not class_counts:
+        return "No objects detected"
+
+    readable_output = ", ".join(
+        [f"{count} {name if count == 1 else name + 's'}" for name, count in class_counts.items()]
+    )
+
+    return f"Detected: {readable_output}"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))  # Compatible with Render
+    app.run(host="0.0.0.0", port=port)
