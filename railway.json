@@ -1,0 +1,7 @@
+{
+  "build": {
+    "env": {
+      "ULTRALYTICS_CACHE_DIR": "/tmp"
+    }
+  }
+}
