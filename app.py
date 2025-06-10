@@ -15,7 +15,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/", methods=["GET"])
 def index():
-    return "🚀 YOLOv8 Object Detection API is running!"
+    return "ClearSight Object Detection API is running!"
 
 @app.route("/detect", methods=["POST"])
 def detect_objects():
